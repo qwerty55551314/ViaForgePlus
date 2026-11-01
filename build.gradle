@@ -29,10 +29,7 @@ minecraft {
 }
 
 repositories {
-    maven {
-        name = "ViaVersion"
-        url = "https://repo.viaversion.com"
-    }
+    maven { name = "ViaVersion"; url = "https://repo.viaversion.com" }
     maven { url = "https://repo.spongepowered.org/repository/maven-public" }
     mavenCentral()
 }
@@ -44,9 +41,9 @@ dependencies {
     implementation "net.raphimc:ViaLoader:3.0.1"
 }
 
+// 【核心修正】MixinGradle 0.6 的正确语法
 mixin {
-    defaultRefmap = "mixins.viaforgeplus.refmap.json"
-    refmap = "mixins.viaforgeplus.refmap.json"
+    add sourceSets.main, "mixins.viaforgeplus.refmap.json"
 }
 
 shadowJar {
