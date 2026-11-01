@@ -1,123 +1,64 @@
 buildscript {
     repositories {
+        maven { url = "https://maven.minecraftforge.net" }
+        maven { url = "https://repo.spongepowered.org/repository/maven-public" }
         mavenCentral()
-        maven {
-            url = "https://maven.minecraftforge.net/"
-        }
-        maven {
-            url = "https://repo.spongepowered.org/repository/maven-public/"
-        }
-        maven {
-            url = "https://repo.viaversion.com"
-        }
-        maven {
-            url = "https://jitpack.io/"
-        }
     }
-
     dependencies {
         classpath "net.minecraftforge.gradle:ForgeGradle:2.1-SNAPSHOT"
         classpath "org.spongepowered:mixingradle:0.6-SNAPSHOT"
-        classpath "com.github.johnrengelman.shadow:com.github.johnrengelman.shadow.gradle.plugin:4.0.4"
+        classpath "com.github.jengelman.gradle.plugins:shadow:4.0.4"
     }
 }
 
-apply plugin: "java"
-apply plugin: "idea"
 apply plugin: "net.minecraftforge.gradle.forge"
 apply plugin: "org.spongepowered.mixin"
 apply plugin: "com.github.johnrengelman.shadow"
 
-group = project.maven_group
-archivesBaseName = project.maven_name
-version = project.maven_version
+version = "1.0.0"
+group = "net.aspw.viaforgeplus"
+archivesBaseName = "viaforgeplus"
 
-compileJava.options.encoding = "UTF-8"
-
-repositories {
-    mavenCentral()
-    maven { url = "https://maven.minecraftforge.net/" }
-    maven { url = "https://repo.spongepowered.org/repository/maven-public/" }
-    maven { url = "https://repo.viaversion.com" }
-    maven { url = "https://jitpack.io/" }
-}
+sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = "1.8"
 
 minecraft {
     version = "1.8.9-11.15.1.2318-1.8.9"
     runDir = "run"
     mappings = "stable_22"
     makeObfSourceJar = false
-    clientJvmArgs += ["-Dfml.coreMods.load=net.aspw.viaforgeplus.mixin.MixinLoader"]
 }
 
-sourceSets {
-    main.java.srcDirs += 'src/main/java'
-    main.java.srcDirs += '../shared/main/java'
-    main.resources.srcDirs += '../shared/main/resources'
-}
-
-configurations {
-    include
-    implementation.extendsFrom(include)
+repositories {
+    maven {
+        name = "ViaVersion"
+        url = "https://repo.viaversion.com"
+    }
+    maven { url = "https://repo.spongepowered.org/repository/maven-public" }
+    mavenCentral()
 }
 
 dependencies {
-    include fileTree(dir: "output", include: "*.jar")
-
-    include "com.squareup.okhttp3:okhttp:4.9.2"
-    include "org.slf4j:slf4j-api:2.0.16"
-    include compile ("org.spongepowered:mixin:${project.mixin_version}") {
-        exclude module: "launchwrapper"
-    }
-}
-
-sourceCompatibility = JavaVersion.VERSION_1_8
-targetCompatibility = JavaVersion.VERSION_1_8
-
-processResources {
-    from(sourceSets.main.resources.srcDirs) {
-        exclude "mcmod.info"
-    }
-
-    rename '(.+_at.cfg)', 'META-INF/$1'
+    implementation "com.viaversion:viaversion-common:5.3.1"
+    implementation "com.viaversion:viabackwards-common:5.3.1"
+    implementation "com.viaversion:viarewind-common:4.0.7"
+    implementation "net.raphimc:ViaLoader:3.0.1"
 }
 
 mixin {
-    add sourceSets.main, "mixins.${maven_name}.refmap.json"
-}
-
-jar {
-    manifest.attributes(
-            "MixinConfigs": "mixins.${maven_name}.json",
-            "TweakClass": "org.spongepowered.asm.launch.MixinTweaker",
-            "TweakOrder": 0,
-            "FMLCorePlugin": "net.aspw.viaforgeplus.mixin.MixinLoader",
-            "FMLCorePluginContainsFMLMod": "true",
-            "ForceLoadAsMod": "true",
-            "FMLAT": "viaforgeplus_at.cfg",
-    )
-
-    enabled = false
-}
-
-idea {
-    module {
-        inheritOutputDirs = true
-    }
+    defaultRefmap = "mixins.viaforgeplus.refmap.json"
+    refmap = "mixins.viaforgeplus.refmap.json"
 }
 
 shadowJar {
-    archiveName = jar.archiveName
-    configurations = [project.configurations.include] // Include the dependencies from the include configuration
-    duplicatesStrategy DuplicatesStrategy.EXCLUDE
-
-    // Prevent conflicts with Forge's weird service loading
-    exclude("META-INF/maven/**")
-    exclude("META-INF/versions/**")
+    dependencies {
+        include(dependency("com.viaversion:.*"))
+        include(dependency("net.raphimc:ViaLoader.*"))
+    }
+    classifier = ""
 }
 
 reobf {
-    shadowJar {}
+    shadowJar { mappings = "searge" }
 }
 
-jar.dependsOn("shadowJar")
+build.dependsOn shadowJar
