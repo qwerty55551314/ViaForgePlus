@@ -1,34 +1,75 @@
-name: Java CI with Gradle
+buildscript {
+    repositories {
+        maven { url = "https://maven.minecraftforge.net" }
+        maven { url = "https://repo.spongepowered.org/repository/maven-public" }
+        mavenCentral()
+    }
+    dependencies {
+        classpath "net.minecraftforge.gradle:ForgeGradle:2.1-SNAPSHOT"
+        classpath "org.spongepowered:mixingradle:0.6-SNAPSHOT"
+        classpath "com.github.jengelman.gradle.plugins:shadow:4.0.4"
+    }
+}
 
-on:
-  push:
-    branches: [ main, master ] # 重点②：合并为一个 branches 列表，同时监听
-  pull_request:
-    branches: [ main, master ]
-  workflow_dispatch: # 允许在 Actions 页面手动点击触发，作为补充
+apply plugin: "net.minecraftforge.gradle.forge"
+apply plugin: "org.spongepowered.mixin"
+apply plugin: "com.github.johnrengelman.shadow"
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+version = "1.0.0" // 可自行修改
+group = "net.aspw.viaforgeplus"
+archivesBaseName = "viaforgeplus"
 
-      - name: Set up JDK 8
-        uses: actions/setup-java@v4
-        with:
-          java-version: '8'
-          distribution: 'temurin'
+sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = "1.8"
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+minecraft {
+    version = "1.8.9-11.15.1.2318-1.8.9"
+    runDir = "run"
+    mappings = "stable_22"
+    makeObfSourceJar = false
+}
 
-      - name: Build with Gradle
-        run: ./gradlew build # 重点①：自动执行构建
+repositories {
+    // 核心：ViaVersion 官方仓库，提供所有 Via* 系列构件[reference:0]
+    maven {
+        name = "ViaVersion"
+        url = "https://repo.viaversion.com"
+    }
+    maven { url = "https://repo.spongepowered.org/repository/maven-public" }
+    mavenCentral()
+}
 
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ViaForgePlus-Build-Artifacts # 重点①：产物统一放在这个名称下
-          path: build/libs/*.jar # 重点②：合并为一个路径，抓取所有 Jar
-          if-no-files-found: error
+dependencies {
+    // ViaVersion 核心：ProtocolVersion、Via、PacketWrapper 等基础类
+    implementation "com.viaversion:viaversion-common:5.3.1"
+
+    // ViaBackwards：Protocol1_11To1_10 等跨版本协议类
+    implementation "com.viaversion:viabackwards-common:5.3.1"
+
+    // ViaRewind：Protocol1_9To1_8 等旧版本协议类
+    implementation "com.viaversion:viarewind-common:4.0.7"
+
+    // ViaLoader：ViaLoader、VLInjector、VLLegacyPipeline 等平台实现类
+    // 注意：ViaLoader 的 groupId 是 net.raphimc，而非 com.viaversion
+    implementation "net.raphimc:ViaLoader:3.0.1"
+}
+
+mixin {
+    defaultRefmap = "mixins.viaforgeplus.refmap.json"
+    refmap = "mixins.viaforgeplus.refmap.json"
+}
+
+shadowJar {
+    // 将 ViaVersion 等依赖一并打包进最终 jar，避免运行时 ClassNotFound
+    dependencies {
+        include(dependency("com.viaversion:.*"))
+        include(dependency("net.raphimc:ViaLoader.*"))
+    }
+    classifier = "" // 让 shadowJar 产出主 jar，而非 "-all" 后缀
+}
+
+reobf {
+    shadowJar { mappings = "searge" }
+}
+
+// 让 build 任务依赖 shadowJar，确保 ./gradlew build 产出包含依赖的完整 jar
+build.dependsOn shadowJar
