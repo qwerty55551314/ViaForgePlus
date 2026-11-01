@@ -36,16 +36,36 @@ repositories {
     maven { url = "https://repo.viaversion.com" }
 }
 
+configurations {
+    include
+    implementation.extendsFrom(include)
+}
+
 dependencies {
-    implementation "org.spongepowered:mixin:0.7.11-SNAPSHOT"
-    implementation "com.viaversion:viaversion-common:5.3.1"
-    implementation "com.viaversion:viabackwards-common:5.3.1"
-    implementation "com.viaversion:viarewind-common:4.0.7"
-    implementation "net.raphimc:ViaLoader:3.0.1"
+    // Mixin 注解处理器与运行时
+    include("org.spongepowered:mixin:0.7.11-SNAPSHOT") {
+        exclude module: "launchwrapper"
+    }
+
+    // ViaVersion 核心套件（Java 8 兼容版本）
+    include "com.viaversion:viaversion-common:4.10.0"
+    include "com.viaversion:viabackwards-common:4.10.0"
+    include "com.viaversion:viarewind-common:3.0.6"
+
+    // 关键修正：ViaLoader 降级至 2.2.x 版本，保持 com.viaversion.vialoader 包路径
+    include "net.raphimc:ViaLoader:2.2.10"
+
+    // 补充：更新检查模块依赖的 okhttp3（Java 8 兼容）
+    include "com.squareup.okhttp3:okhttp:4.9.2"
+
+    // 附加必要的 SLF4J 与 YAML 解析库
+    include "org.slf4j:slf4j-api:2.0.13"
+    include "org.yaml:snakeyaml:2.2"
 }
 
 compileJava {
     options.fork = true
+    options.encoding = "UTF-8"
     def jdk17Home = System.getenv("JAVA_HOME_17_X64") ?: System.getenv("JAVA_HOME")
     options.forkOptions.executable = new File(jdk17Home, "bin/javac").absolutePath
 }
@@ -55,6 +75,9 @@ mixin {
 }
 
 shadowJar {
+    archiveName = jar.archiveName
+    configurations = [project.configurations.include]
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     classifier = ""
 }
 
